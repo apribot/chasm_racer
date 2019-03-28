@@ -201,6 +201,7 @@ var keys = new Array();
 var clock;
 var restart = false;
 var hardness = 2;
+var frametime = 25;
 keys['u'] = false;
 keys['d'] = false;
 keys['l'] = false;
@@ -393,15 +394,23 @@ function startthegame() {
 	document.getElementById('term').style.display = 'block';
 	document.getElementById("startmusic").pause();
 	document.getElementById("bgmusic").play();
-    clock = setInterval(function () {init();},20);
+    clock = setInterval(function () {init();},frametime);
     setInterval(function () {harder();},1500);
 }
 
 function harder() {
-	if(hardness <= 75) {
-			hardness++; 
+	if(hardness <= 20) {
+		hardness++; 
+	} else {
+		score = score * 2;
+		hardness = 2;
+		if(frametime > 5) {
+			frametime = frametime - 2;
+			clearInterval(clock);
+			clock = setInterval(function () {init();},frametime);
+
 		}
-		console.log(hardness);
+	}
 }
 
 document.onkeypress = function (e) {    
