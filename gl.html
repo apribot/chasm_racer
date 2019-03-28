@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Chasm Racer</title>
+<style>
+#term {
+	color:#eee;
+	display:none;
+	width:600px;
+	-webkit-transform: perspective( 600px ) rotatex( 45deg );
+	transform: perspective( 600px ) rotatex( 45deg );
+}
+
+body {
+	background:#000;
+}
+
+#score {
+	color:#eee;
+}
+
+#end {
+	color:#f00;
+	display:none;
+	text-decoration: blink;
+	-webkit-animation-name: blinker;
+	-webkit-animation-duration: 0.6s;
+	-webkit-animation-iteration-count:infinite;
+	-webkit-animation-timing-function:ease-in-out;
+	-webkit-animation-direction: alternate;
+	animation-name: blinker;
+	animation-duration: 0.6s;
+	animation-iteration-count:infinite;
+	animation-timing-function:ease-in-out;
+	animation-direction: alternate;
+}
+
+@-webkit-keyframes blinker {
+  from {opacity: 1.0;}
+  to {opacity: 0.5;}
+}
+
+@-webkit-keyframes fade {
+  from {-webkit-filter: blur(0px);}
+  to {-webkit-filter: blur(15px);background:#d00;}
+}
+
+@keyframes blinker {
+  from {opacity: 1.0;}
+  to {opacity: 0.5;}
+}
+
+@keyframes fade {
+  from {}
+  to {background:#d00;}
+}
+
+.blerr {
+	-webkit-animation-name: fade;
+	-webkit-animation-duration: 3s;
+	-webkit-animation-iteration-count:1;
+	-webkit-animation-timing-function:ease-in-out;
+	-webkit-animation-direction: linear;
+	animation-name: fade;
+	animation-duration: 3s;
+	animation-iteration-count:1;
+	animation-timing-function:ease-in-out;
+	animation-direction: linear;
+}
+
+
+#title {
+	color:#0f0;
+}
+
+#title #play {
+	color:#fff;
+	text-decoration: blink;
+	-webkit-animation-name: blinker;
+	-webkit-animation-duration: 0.6s;
+	-webkit-animation-iteration-count:infinite;
+	-webkit-animation-timing-function:ease-in-out;
+	-webkit-animation-direction: alternate;
+	animation-name: blinker;
+	animation-duration: 0.6s;
+	animation-iteration-count:infinite;
+	animation-timing-function:ease-in-out;
+	animation-direction: alternate;
+}
+
+#end #replay {
+	color:#fff;
+	text-decoration: blink;
+	-webkit-animation-name: blinker;
+	-webkit-animation-duration: 0.6s;
+	-webkit-animation-iteration-count:infinite;
+	-webkit-animation-timing-function:ease-in-out;
+	-webkit-animation-direction: alternate;
+	animation-name: blinker;
+	animation-duration: 0.6s;
+	animation-iteration-count:infinite;
+	animation-timing-function:ease-in-out;
+	animation-direction: alternate;
+}
+
+.ship {
+	color:#779;
+}
+.flare {
+	color:#f95;
+
+}
+.asteroid {
+	color:#d70;
+}
+.outer{
+	width: 600px;
+    height: 520px;
+    position: absolute;
+    top:0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
+</style>
+</head>
+<body>
+<div class='outer'>
+<pre id='score'>
+</pre>
+<pre id='term'>
+</pre>
+<pre id='end'>
+
+
+
+
+
+
+
+
+
+
+
+        ___________.__             ___________           .___
+        \__    ___/|  |__   ____   \_   _____/ ____    __| _/
+          |    |   |  |  \_/ __ \   |    __)_ /    \  / __ | 
+          |    |   |   Y  \  ___/   |        \   |  \/ /_/ | 
+          |____|   |___|  /\___  > /_______  /___|  /\____ | 
+                        \/     \/          \/     \/      \/ 
+ 
+                      <span id='replay'>[SPACEBAR TO TRY AGAIN]</span>
+</pre>
+<pre id='title'>
+
+
+
+
+
+
+              _________ .__                           
+              \_   ___ \|  |__ _____    ______ _____  
+              /    \  \/|  |  \\__  \  /  ___//     \ 
+              \     \___|   Y  \/ __ \_\___ \|  Y Y  \
+               \______  /___|  (____  /____  >__|_|  /
+                      \/     \/     \/     \/      \/ 
+               __________                             
+               \______   \_____    ____  ___________  
+                |       _/\__  \ _/ ___\/ __ \_  __ \ 
+                |    |   \ / __ \\  \__\  ___/|  | \/ 
+                |____|_  /(____  /\___  >___  >__|    
+                       \/      \/     \/    \/     
+
+                       Use arrow keys to move
+                         <i>('s' key to mute)</i>
+
+                        <span id='play'>[SPACEBAR TO START]</span>
+                         
+</pre>
+</div>
+<script>
+
+// oldschool object avoidance game
+// code & music by Justin M
+
+String.prototype.splice = function(start,length,replacement) {
+    return this.substr(0,start)+replacement+this.substr(start+length);
+}
+
+var score = 0;
+var term = new Array();
+var shippos = new Array();
+var walll = new Array();
+var wallr = new Array();
+var asteroids = new Array();
+var termx = 70;
+var termy = 30;
+var keys = new Array();
+var clock;
+var restart = false;
+var hardness = 2;
+keys['u'] = false;
+keys['d'] = false;
+keys['l'] = false;
+keys['r'] = false;
+
+shippos['x'] = 33;
+shippos['y'] = 16;
+
+// make initial walls
+walll[0] = 10;
+wallr[0] = 60;
+
+maketerm();
+
+var startE = document.getElementById('play');
+
+startE.addEventListener('click', function() {
+	startthegame();
+}, false);
+
+asteroids[0] = false
+for( y = 1; y<=termy; y++)
+{
+	asteroids[y] = false;
+	walll[y] = walll[y-1] + (Math.floor((Math.random()*3)) - 1);
+	wallr[y] = wallr[y-1] + (Math.floor((Math.random()*3)) - 1);
+	term[y] = term[y].splice(walll[y],1,":");
+	term[y] = term[y].splice(wallr[y],1,":");
+}
+
+function maketerm() {
+	for (var y = 0; y <= termy; y++) {
+		term[y] = '';
+		for (var x = 0; x <= termx; x++) {
+			term[y] += ' ';
+		}
+	}
+}
+
+function putShip() {
+	term[shippos['y']-1] = term[shippos['y']-1].splice(shippos['x'],1,"<span class='ship'>|</span>");
+	term[shippos['y']] = term[shippos['y']].splice(shippos['x']-1,3,"<span class='ship'>/|\\</span>");
+	term[shippos['y']+1] = term[shippos['y']+1].splice(shippos['x'],1,"<span class='flare'>'</span>");
+}
+
+function render() {
+	document.getElementById('term').innerHTML = term.join('\n');
+}
+
+function makewalls() {
+
+	for( y = termy; y>=1; y--) {
+		// move down walls and asteroids
+		walll[y] = walll[y-1];
+		wallr[y] = wallr[y-1];
+		asteroids[y] = asteroids[y-1];
+	}
+
+	// generate new wall
+	walll[0] = walll[1] + (Math.floor((Math.random()*3)) - 1);
+	wallr[0] = wallr[1] + (Math.floor((Math.random()*3)) - 1);
+
+	// do bounding
+	if(wallr[0] - walll[0] <= 7)
+	{
+		wallr[0] += 1;
+		walll[0] -= 1;
+	}
+	if(walll[0] < 0) {
+		walll[0] = 0;
+	}
+	if(walll[0] > termx) {
+		walll[0] = termx;
+	}
+	if(wallr[0] < 0) {
+		wallr[0] = 0;
+	}
+	if(wallr[0] > termx) {
+		wallr[0] = termx;
+	}
+
+	//randomly generate asteroid if walls aren't too close
+	asteroids[0] = false;
+	if(wallr[0] - walll[0] > 20)
+	{
+		if( Math.floor((Math.random()*100)) <= hardness ) {
+			asteroids[0] = Math.floor((Math.random()*(wallr[0]-walll[0])) + walll[0]); //something's still fucked up with this......
+		}
+	}
+
+	// check collision
+	if(walll[shippos['y']] >= shippos['x'] || wallr[shippos['y']] <= shippos['x'] || asteroids[shippos['y']] == shippos['x'] || asteroids[shippos['y']] == shippos['x']-1 || asteroids[shippos['y']] == shippos['x'] + 1 ) {
+		document.getElementById('term').className += ' ' + 'blerr';
+		document.getElementById("bgmusic").pause();
+		document.getElementById("deadmusic").play();
+		clearInterval(clock);
+		setTimeout(function(){
+			document.getElementById('term').className = '';
+			document.getElementById('end').style.display = 'block';
+			document.getElementById('term').style.display = 'none';
+		},2000);
+		restart = true;
+	}
+
+	for(y = 0; y<=termy; y++) {
+		// add to term
+		if(asteroids[y] !== false) {
+			term[y] = term[y].splice(asteroids[y],1,"#");
+		}
+		term[y] = term[y].splice(walll[y],1,":");
+		term[y] = term[y].splice(wallr[y],1,":");
+	}
+}
+
+document.onkeydown = function (e) {    
+	switch(e.keyCode) {
+		case 37:
+			keys['l'] = true;
+			break;
+		case 39:
+			keys['r'] = true;
+			break;
+		case 38:
+			keys['u'] = true;
+			break;
+		case 40:
+			keys['d'] = true;
+			break;
+	}
+};
+
+document.onkeyup = function (e) {    
+	switch(e.keyCode) {
+		case 37:
+			keys['l'] = false;
+			break;
+		case 39:
+			keys['r'] = false;
+			break;
+		case 38:
+			keys['u'] = false;
+			break;
+		case 40:
+			keys['d'] = false;
+			break;
+	}
+};
+
+function checkKeys() {
+	if(keys['u'] == true) {
+		shippos['y'] -= 1;
+	}
+	if(keys['d'] == true) {
+		shippos['y'] += 1;
+	}
+	if(keys['l'] == true) {
+		shippos['x'] -= 1;
+	}
+	if(keys['r'] == true) {
+		shippos['x'] += 1;
+	}
+
+	// ship bounding
+	if(shippos['x'] < 1) {
+		shippos['x'] = 1;
+	}
+	if(shippos['x'] > (termx-1)) {
+		shippos['x'] = termx-1;
+	}
+	if(shippos['y'] < 1) {
+		shippos['y'] = 1;
+	}
+	if(shippos['y'] > termy-1) {
+		shippos['y'] = termy-1;
+	}
+}
+
+function init() {
+	checkKeys();
+	maketerm();
+	makewalls();
+	putShip();
+	render();
+	score++;
+	document.getElementById('score').innerHTML = 'SCORE: ' + score;
+}
+
+function startthegame() {
+	document.getElementById('title').style.display = 'none';
+	document.getElementById('term').style.display = 'block';
+	document.getElementById("startmusic").pause();
+	document.getElementById("bgmusic").play();
+    clock = setInterval(function () {init();},20);
+    setInterval(function () {harder();},1500);
+}
+
+function harder() {
+	if(hardness <= 75) {
+			hardness++; 
+		}
+		console.log(hardness);
+}
+
+document.onkeypress = function (e) {    
+	if((e.keyCode == 32 || e.which == 32)  && typeof clock === 'undefined' && restart == false)
+	{	
+		startthegame();
+	} else if((e.keyCode == 32 || e.which == 32)  && restart == true)
+	{	
+		location.reload(); //hax because lazy
+	}
+	else if(String.fromCharCode(e.keyCode) == 's')
+	{
+		document.getElementById('bgmusic').src = '';
+		document.getElementById('deadmusic').src = '';
+		document.getElementById('startmusic').src = '';
+	}
+}
+</script>
+<audio loop id='bgmusic'>
+  <source src="bg2.mp3" type="audio/mpeg">
+</audio>
+<audio id='deadmusic'>
+  <source src="dead.mp3" type="audio/mpeg">
+</audio>
+<audio id='startmusic' autoplay>
+  <source src="start.mp3" type="audio/mpeg">
+</audio>
+</body>
+</html>
